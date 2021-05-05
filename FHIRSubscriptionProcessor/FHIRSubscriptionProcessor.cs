@@ -82,13 +82,14 @@ namespace FHIRSubscriptionProcessor
                     JToken fhirresp = result.toJToken();
                     if (!fhirresp["entry"].IsNullOrEmpty())
                     {
+                        //Resource met criteria so lets queue it to the notify processor
                         log.LogInformation($"ProcessResourceEvent: {restype}/{resid} met criteria for Subscription/{id} Adding to notify queue...");
                         Message msg = new Message();
                         msg.Body = Encoding.UTF8.GetBytes(id);
                         await outputTopic.AddAsync(msg);
                     } else
                     {
-                        log.LogInformation($"ProcessResourceEvent: {restype}/{resid} did not met criteria for Subscription/{id}");
+                        log.LogInformation($"ProcessResourceEvent: {restype}/{resid} did not meet criteria for Subscription/{id}");
                     }
                 }
             }

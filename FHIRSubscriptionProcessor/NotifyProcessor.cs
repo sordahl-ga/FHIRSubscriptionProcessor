@@ -53,13 +53,23 @@ namespace FHIRSubscriptionProcessor
             catch (System.Net.WebException we)
             {
                 HttpWebResponse response = (System.Net.HttpWebResponse)we.Response;
-                //Retry on Transient Errors otherwise deadlettter for permanent
-                if (response.StatusCode == HttpStatusCode.TooManyRequests || response.StatusCode == HttpStatusCode.ServiceUnavailable)
+                if (response != null)
                 {
-                    await RetryMessageAsync(msg, messageReceiver, outputTopic, log);
+                    //Retry on Transient Errors otherwise deadlettter for permanent
+                    if (response.StatusCode == HttpStatusCode.TooManyRequests || response.StatusCode == HttpStatusCode.ServiceUnavailable)
+                    {
+                          log.LogWarning($"Web Client Transient Error:{we.Message}...Notify Subscription/{subid} is requeing for retry!");
+                          await RetryMessageAsync(msg, messageReceiver, outputTopic, log);
+                    }
+                    else
+                    {
+                        log.LogError($"Web Client permanent failure:{we.Message}...Notify Subscription/{subid} Message is dead lettered!");
+                        await messageReceiver.DeadLetterAsync(msg.SystemProperties.LockToken, response.StatusDescription);
+                    }
                 } else
                 {
-                    await messageReceiver.DeadLetterAsync(msg.SystemProperties.LockToken, response.StatusDescription);
+                    await messageReceiver.DeadLetterAsync(msg.SystemProperties.LockToken, we.Message);
+                    log.LogError($"Web Client error:{we.Message}...Notify Subscription/{subid} Message is dead lettered!");
                 }
                                    
             }
