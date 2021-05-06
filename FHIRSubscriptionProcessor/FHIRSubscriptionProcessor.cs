@@ -110,17 +110,24 @@ namespace FHIRSubscriptionProcessor
                             return;
                         }
                         JToken t = fhirresp.toJToken();
+                        string status = (t["status"].IsNullOrEmpty() ? "" : t["status"].ToString());
                         string criteria = t["criteria"].ToString();
-                        log.LogInformation($"Registering Subscription/{id}...");
-                        //Status should be requested
-                        if (t["status"].IsNullOrEmpty() || !t["status"].ToString().Equals("requested"))
+                        //For Status off or error remove the cache subscription and thats it no changes to resource on Server
+                        if (status.Equals("off") || status.Equals("error"))
+                        {
+                            removeSubscriptionCache(id, log);
+                            return;
+                        }
+                        //Status should be requested for new/updated Subscriptions server marks them active
+                        else if (status.Equals("active"))
                         {
                             t["status"] = "error";
-                            t["error"] = $"ProcessSubscription: Status should be 'requested' on new/updated Subscription/{id}";
-                            
+                            t["error"] = $"ProcessSubscription: Status can only be marked active by server...Subscription/{id}";
+
                         }
                         else
                         {
+                            //Validate Subscription Resource
                             if (t["channel"].IsNullOrEmpty() || t["channel"]["type"].IsNullOrEmpty() || !t["channel"]["type"].ToString().Equals("rest-hook"))
                             {
                                 t["status"] = "error";
@@ -150,7 +157,8 @@ namespace FHIRSubscriptionProcessor
                                         t["status"] = "active";
                                         t["error"] = "";
                                         cacheSubscription(t, log);
-                                    }
+                                        log.LogInformation($"ProcessSubscription: Subscription/{id} is now active in cache...");
+                                }
                                 }
                             }
                         }
@@ -162,7 +170,7 @@ namespace FHIRSubscriptionProcessor
                         var saveresult = await updateFHIRSubscription(id, t.ToString(), log);
                         break;
                     case "Deleted":
-                        log.LogInformation($"Deleting subscription {id}...");
+                        log.LogInformation($"Deleting subscription from cache {id}...");
                         removeSubscriptionCache(id, log);
                         break;
                     default:

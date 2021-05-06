@@ -8,6 +8,7 @@ using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Azure.ServiceBus.Core;
 using System.Collections.Specialized;
 using System.Net;
+using Newtonsoft.Json.Linq;
 
 namespace FHIRSubscriptionProcessor
 {
@@ -39,15 +40,19 @@ namespace FHIRSubscriptionProcessor
                 string cep = t["channel"]["endpoint"].ToString();
                 using (System.Net.WebClient client = new System.Net.WebClient())
                 {
-
+                    if (!t["channel"]["header"].IsNullOrEmpty())
+                    {
+                        JArray arr = (JArray)t["channel"]["header"];
+                        foreach (JToken head in arr)
+                        {
+                            client.Headers.Add(head.ToString());
+                        }
+                    }
                     byte[] response =
                         client.UploadValues(cep, new NameValueCollection());
                     string result = System.Text.Encoding.UTF8.GetString(response);
                     
                 }
-                t["status"] = "active";
-                t["error"] = "";
-                await FHIRSubscriptionProcessor.updateFHIRSubscription(subid, t.ToString(), log);
                 await messageReceiver.CompleteAsync(msg.SystemProperties.LockToken);
             }
             catch (System.Net.WebException we)
@@ -59,51 +64,70 @@ namespace FHIRSubscriptionProcessor
                     if (response.StatusCode == HttpStatusCode.TooManyRequests || response.StatusCode == HttpStatusCode.ServiceUnavailable)
                     {
                           log.LogWarning($"Web Client Transient Error:{we.Message}...Notify Subscription/{subid} is requeing for retry!");
-                          await RetryMessageAsync(msg, messageReceiver, outputTopic, log);
+                          await RetryMessageAsync(msg, messageReceiver, outputTopic, t, log);
                     }
                     else
                     {
-                        log.LogError($"Web Client permanent failure:{we.Message}...Notify Subscription/{subid} Message is dead lettered!");
                         await messageReceiver.DeadLetterAsync(msg.SystemProperties.LockToken, response.StatusDescription);
+                        await ProcessSubscriptionInError(t, we.Message, log);
                     }
                 } else
                 {
                     await messageReceiver.DeadLetterAsync(msg.SystemProperties.LockToken, we.Message);
-                    log.LogError($"Web Client error:{we.Message}...Notify Subscription/{subid} Message is dead lettered!");
+                    await ProcessSubscriptionInError(t, we.Message, log);
                 }
                                    
             }
             catch (Exception e)
             {
                 //Unhandled Exception Deadletter the message
+                log.LogError($"Web Client unhandled exception:{e.Message}");
                 await messageReceiver.DeadLetterAsync(msg.SystemProperties.LockToken, e.Message);
-
+                await ProcessSubscriptionInError(t, e.Message, log);
             }
         }
-        private static async Task RetryMessageAsync(Message msg, MessageReceiver messageReceiver, IAsyncCollector<Message> outputTopic,ILogger log)
+        private static async Task RetryMessageAsync(Message msg, MessageReceiver messageReceiver, IAsyncCollector<Message> outputTopic,JToken t, ILogger log)
         {
-            int rtc = Utils.GetIntEnvironmentVariable("FSP-MAX-NOTIFY-RETRIES", "5");
+            int rtc = Utils.GetIntEnvironmentVariable("FSP-NOTIFY-MAXRETRIES", "5");
             const string retryCountString = "RetryCount";
             // get our custom RetryCount property from the received message if it exists
             // if not, initiate it to 0
             var retryCount = msg.UserProperties.ContainsKey(retryCountString)
                 ? (int)msg.UserProperties[retryCountString]
                 : 0;
-            // if we've tried 10 times or more, deadletter this message
-            if (retryCount >= 10)
+            // if we've exceeded retry count linit, deadletter this message, mark subscription in error
+            if (retryCount > rtc)
             {
                 await messageReceiver.DeadLetterAsync(msg.SystemProperties.LockToken, $"Retry count > {rtc}");
+                await ProcessSubscriptionInError(t, "Notification channel exceeded max retry count", log);
                 return;
             }
             // create a copy of the received message
             var clonedMessage = msg.Clone();
-            // set the ScheduledEnqueueTimeUtc to 30 seconds from now
-            clonedMessage.ScheduledEnqueueTimeUtc = DateTime.UtcNow.AddSeconds(30);
+            // set the ScheduledEnqueueTimeUtc to configured seconds from now default is 30
+            int rsecs = Utils.GetIntEnvironmentVariable("FSP-NOTIFY-RETRYAFTER-SECONDS", "30");
+            clonedMessage.ScheduledEnqueueTimeUtc = DateTime.UtcNow.AddSeconds(rsecs);
             clonedMessage.UserProperties[retryCountString] = retryCount + 1;
             await outputTopic.AddAsync(clonedMessage);
 
             // IMPORTANT- Complete the original Message!
             await messageReceiver.CompleteAsync(msg.SystemProperties.LockToken);
         }
+        private static async Task ProcessSubscriptionInError(JToken t, string errmsg, ILogger log)
+        {
+            string id = t["id"].ToString();
+            t["status"] = "error";
+            t["error"] = errmsg;
+            FHIRSubscriptionProcessor.removeSubscriptionCache(id, log);
+            var fr = await FHIRSubscriptionProcessor.updateFHIRSubscription(id, t.ToString(), log);
+            if (fr.IsSuccess())
+            {
+                log.LogError($"NotifyProcessor: Channel notify permanent error:{errmsg}...Notify Subscription/{id} status is now error!");
+            } else
+            {
+                log.LogError($"NotifyProcessor: Error updating Subscription/{id} on FHIR Server:{fr.ToString()}");
+            }
+        }
     }
+  
 }
