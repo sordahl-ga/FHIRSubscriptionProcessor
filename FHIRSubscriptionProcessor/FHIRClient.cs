@@ -47,7 +47,6 @@ namespace FHIRSubscriptionProcessor
                         _bearerToken = ADUtils.GetOAUTH2BearerToken(Utils.GetEnvironmentVariable("FS-RESOURCE"), Utils.GetEnvironmentVariable("FS-TENANT-NAME"),
                                                                     Utils.GetEnvironmentVariable("FS-CLIENT-ID"), Utils.GetEnvironmentVariable("FS-SECRET")).GetAwaiter().GetResult();
                         _fhirClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _bearerToken);
- 
                     }
                 }
             }
@@ -108,8 +107,9 @@ namespace FHIRSubscriptionProcessor
                 }
                 if (!string.IsNullOrEmpty(body))
                 {
-                    _fhirRequest.Content = new StringContent(body, Encoding.UTF8, ct);
-                    _fhirRequest.Content.Headers.ContentType = new MediaTypeHeaderValue(ct);
+                    _fhirRequest.Content = new StringContent(body, Encoding.UTF8);
+                    _fhirRequest.Content.Headers.Remove("Content-Type");
+                    _fhirRequest.Content.Headers.Add("Content-Type", ct);
                 }
                 _fhirResponse = await _fhirClient.SendAsync(_fhirRequest);
                 // Read Response Content (this will usually be JSON content)
