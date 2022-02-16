@@ -33,10 +33,10 @@ namespace FHIRSubscriptionProcessor
                         foreach (var key in server.Keys())
                         {
                             string k = key.ToString();
-                            if (k.StartsWith(FHIRSubscriptionProcessor.RESCACHEPREFIX))
+                            if (k.StartsWith(EventHubProcessor.RESCACHEPREFIX))
                             {
-                                string id = k.Substring(FHIRSubscriptionProcessor.RESCACHEPREFIX.Length);
-                                FHIRSubscriptionProcessor.removeSubscriptionCache(id, log);
+                                string id = k.Substring(EventHubProcessor.RESCACHEPREFIX.Length);
+                                EventHubProcessor.removeSubscriptionCache(id, log);
                             }
                         }
                         log.LogInformation("Reloading subscription cache....");
@@ -49,7 +49,7 @@ namespace FHIRSubscriptionProcessor
                                 JArray subs = (JArray)t["entry"];
                                 foreach (JToken r in subs)
                                 {
-                                    FHIRSubscriptionProcessor.cacheSubscription(r["resource"], log);
+                                    EventHubProcessor.cacheSubscription(r["resource"], log);
                                 }
                             }
                             log.LogInformation("Subscription Cache has been successfully reloaded");

@@ -5,21 +5,25 @@ FHIR Subscription Processor is an Azure Function App solution that provides supp
  + Supports rest-hook callback notifications
  + Complete Auditing, Error logging and Retry for notifications 
 
-# Subscription Process Overview
-![Bulk Loader](sequence.png)
+## Subscription Process Overview
+![Subscription Processor](./docs/images/sequence.png)
 
-# Prerequsites
+## Prerequsites
 1. The following resources providers must be registered in your subscription and you must have the ability to create/update them:
    + ResourceGroup, KeyVault, Storage Account, App Service Plan, Function App, ServiceBus, EventHub, Azure Cache for Redis
 2. You must have the policy assigned to read/write KeyVault Secrets in the speicified keyvault.
-3. You must have all resource updates flowing through the [FHIR Proxy](https://github.com/microsoft/fhir-proxy) with the PublishEvents post-processor enabled
+3. You must have all resource updates flowing through the [FHIR Proxy](https://github.com/microsoft/fhir-proxy) with the PublishEvents post-processor enabled or using Native Eventing in [Azure Healthcare APIs](https://docs.microsoft.com/en-us/azure/healthcare-apis/)
 
-# Deployment
+## Deployment
 1. [Open Azure Cloud Shell](https://shell.azure.com) you can also access this from [Azure Portal](https://portal.azure.com)
 2. Select Bash Shell for the environment 
-3. Clone this repo ```git clone https://github.com/sordahl-ga/FHIRSubscriptionProcessor```
-4. Execute ```deploysubprocessor.bash```
-5. Follow prompts.
+3. Clone this repo
+```azurecli
+git clone https://github.com/sordahl-ga/FHIRSubscriptionProcessor
+```
+4. Execute ```deploysubprocessor.bash``` 
+
+Detailed instructions can be found [here](./scripts/Readme.md)
 
 
 # Contributing

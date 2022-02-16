@@ -21,18 +21,27 @@ namespace FHIRSubscriptionProcessor
                                       ILogger log)
         {
             var subid = System.Text.Encoding.UTF8.GetString(msg.Body);
-            var t = FHIRSubscriptionProcessor.loadCachedSubscription(subid, log);
+            var t = EventHubProcessor.loadCachedSubscription(subid, log);
+            if (t==null)
+            {
+                string err = $"NotifyProcessor: No Cached Subscription found id: {subid}";
+                log.LogError(err);
+                await messageReceiver.DeadLetterAsync(msg.SystemProperties.LockToken, err);
+                return;
+            }
             if (t["channel"].IsNullOrEmpty() || t["channel"]["type"].IsNullOrEmpty() || !t["channel"]["type"].ToString().Equals("rest-hook"))
             {
                 string err = "NotifyProcessor: Channel type is not supported. Must be rest-hook";
                 log.LogError(err);
                 await messageReceiver.DeadLetterAsync(msg.SystemProperties.LockToken, err);
+                return;
             }
             if (t["channel"].IsNullOrEmpty() || t["channel"]["endpoint"].IsNullOrEmpty())
             {
                 string err = "NotifyProcessor: Channel endpoint is not defined";
                 log.LogError(err);
                 await messageReceiver.DeadLetterAsync(msg.SystemProperties.LockToken, err);
+                return;
             }
             //POST to Channel Endpoint to notify of criteria met.
             try
@@ -118,8 +127,8 @@ namespace FHIRSubscriptionProcessor
             string id = t["id"].ToString();
             t["status"] = "error";
             t["error"] = errmsg;
-            FHIRSubscriptionProcessor.removeSubscriptionCache(id, log);
-            var fr = await FHIRSubscriptionProcessor.updateFHIRSubscription(id, t.ToString(), log);
+            EventHubProcessor.removeSubscriptionCache(id, log);
+            var fr = await EventHubProcessor.updateFHIRSubscription(id, t.ToString(), log);
             if (fr.IsSuccess())
             {
                 log.LogError($"NotifyProcessor: Channel notify permanent error:{errmsg}...Notify Subscription/{id} status is now error!");

@@ -13,11 +13,11 @@ using StackExchange.Redis;
 
 namespace FHIRSubscriptionProcessor
 {
-    public static class FHIRSubscriptionProcessor
+    public static class EventHubProcessor
     {
         public static readonly string RESCACHEPREFIX = "sx-resources-";
         public static readonly string TYPECACHEPREFIX = "sx-types-";
-        [FunctionName("subeventhandler")]
+        [FunctionName("SubscriptionEventHubProcessor")]
         public static async Task Run([EventHubTrigger("%FP-MOD-EVENTHUB-NAME%", ConsumerGroup = "%FSP-CONSUMERGROUPNAME%", Connection = "FP-MOD-EVENTHUB-CONNECTION")] EventData[] events,
                                      [ServiceBus("%FSP-NOTIFYSB-TOPIC%", Connection = "FSP-NOTIFYSB-CONNECTION", EntityType = EntityType.Topic)] IAsyncCollector<Message> outputTopic,
                                      ILogger log)
@@ -59,7 +59,7 @@ namespace FHIRSubscriptionProcessor
             if (exceptions.Count == 1)
                 throw exceptions.Single();
         }
-        private static async Task ProcessResourceEvent(string restype,string resid, string action, IAsyncCollector<Message> outputTopic,ILogger log)
+        public static async Task ProcessResourceEvent(string restype,string resid, string action, IAsyncCollector<Message> outputTopic,ILogger log)
         {
             List<string> idsbytype = loadSubscriptionIdsByType(restype, log);
             if (idsbytype.Count == 0)
@@ -72,7 +72,20 @@ namespace FHIRSubscriptionProcessor
             {
                 var sr = loadCachedSubscription(id, log);
                 var criteria = sr["criteria"].ToString();
-                
+                DateTime? end = (DateTime)sr["end"];
+                if (end.HasValue)
+                {
+                    DateTime now = DateTime.UtcNow;
+                    if (now > end)
+                    {
+                        sr["status"] = "off";
+                        removeSubscriptionCache(id, log);
+                        var saveresult = await updateFHIRSubscription(id, sr.ToString(), log);
+                        log.LogInformation($"Subscription/{id} has expired..Status updated to off");
+                        return;
+                    }
+                    
+                }
                 if (string.IsNullOrEmpty(criteria)) return;
                 criteria += $"&_id={resid}";
                 log.LogInformation($"ProcessResourceEvent: Evalutating Subscription/{id} criteria:{criteria}");
@@ -94,7 +107,7 @@ namespace FHIRSubscriptionProcessor
                 }
             }
         }
-        private static async Task ProcessSubscription(string id,string action, ILogger log)
+        public static async Task ProcessSubscription(string id,string action, ILogger log)
         {
 
             //Load Subscription resource from FHIR Server
@@ -158,7 +171,7 @@ namespace FHIRSubscriptionProcessor
                                         t["error"] = "";
                                         cacheSubscription(t, log);
                                         log.LogInformation($"ProcessSubscription: Subscription/{id} is now active in cache...");
-                                }
+                                    }
                                 }
                             }
                         }

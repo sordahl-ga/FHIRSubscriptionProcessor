@@ -20,6 +20,7 @@ namespace FHIRSubscriptionProcessor
             log.LogInformation("SampleCallBackEndpoint processed a request.");
 
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            log.LogInformation($"The Call-Back Body is:{requestBody}");
            
             return new OkObjectResult("");
         }
