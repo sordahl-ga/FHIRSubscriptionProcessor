@@ -1,8 +1,8 @@
 # FHIR Subscription Processor
 
-FHIR Subscription Processor is an Azure Function App solution that provides support for creation and monitor suppport for [FHIR R4 Subscription resources](https://build.fhir.org/subscription.html):
- + Validates Criteria and Activates Subscription Monitoring upon Subscription Resource Create/Modify 
- + Supports rest-hook callback notifications
+FHIR Subscription Processor is an Azure Function App solution that provides support for creation and monitoring of [FHIR R4 Subscription resources](https://build.fhir.org/subscription.html) Features include:
+ + Validation of Criteria and Activation of Subscription Monitoring upon Subscription Resource Create/Modify 
+ + Support for rest-hook callback notifications
  + Complete Auditing, Error logging and Retry for rest-hook notifications 
 
 ## Subscription Process Overview
