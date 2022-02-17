@@ -32,10 +32,10 @@ declare suffix=$RANDOM
 declare defresourceGroupLocation="westus2"
 declare defresourceGroupName="sub-fhir-"$suffix
 declare defdeployPrefix="sub"$suffix
-declare defAppName="sub-"$defdeployPrefix
+declare defAppName="fsp-"$defdeployPrefix
 declare defkeyVaultName="kv-"$defdeployPrefix
 declare genPostmanEnv="yes"
-declare busnamespaceName="sb-"$defDeployPrefix
+declare busnamespaceName="sb-"$defdeployPrefix
 declare bustopic="notifyfhirsub"
 declare bussub="channelnotify"
 
@@ -657,7 +657,7 @@ echo "Creating Subscription Processor Application"
 	
 	# Deploy Function Application code
 	echo "Deploying FHIR Subscription Processor application repo to ["$subAppName"]...  note - this can take a while"
-	stepresult=$(retry az functionapp deployment source config --branch main --manual-integration --name $subAppName --repo-url https://github.com/sordahl-ga/FHIRSubscriptionProcessor --resource-group $resourceGroupName)
+	stepresult=$(retry az functionapp deployment source config --branch master --manual-integration --name $subAppName --repo-url https://github.com/sordahl-ga/FHIRSubscriptionProcessor --resource-group $resourceGroupName)
 	sleep 30	
 	#---
 
@@ -668,6 +668,13 @@ echo "Creating Subscription Processor Application"
 	echo "Please note the following reference information for future use:"
 	echo "Your FHIR Subscription Processor URL is: "$fahost
 	echo "Your FHIR Subscription Processor Key is: "$fakey
+	echo ""
+	echo "Important:"
+	if [[ "$option" == "proxy" ]]; then
+		echo "Make sure you follow the post install steps for FHIR Proxy Eventing located here:https://github.com/sordahl-ga/FHIRSubscriptionProcessor/scripts/Readme.md"
+	else
+		echo "Make sure you follow the post install steps for Healthcare APIs native eventing located here:https://github.com/sordahl-ga/FHIRSubscriptionProcessor/scripts/Readme.md"
+	fi
 	echo "***************************************************************************************"
 	echo " "
 )

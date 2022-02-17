@@ -121,6 +121,32 @@ Name                                                | Value  | Used For
 ----------------------------------------------------|--------|-----------------------------------
 AzureWebJobs.SubscriptionEventHubProcessor.Disabled | 1      | Disabling EventHub When Using Native 
 WEBSITE_RUN_FROM_PACKAGE                            | 1      | Optional - sets app to read only
- 
+
+
+## Step 2. Post Installation
+
+### For Native Eventing (HealthCare APIs EventGrid)
+1. [Access Azure Portal](https://portal.azure.com)
+2. Find and Select Your Azure Healthcare APIs Workspace for your FHIR Server
+3. Select the Events section on the left hand navigation window
+4. Click on the ```+ Event Subscription``` tab
+![Events1](../docs/images/neventsetup1.png)
+5. Provide a name for your subscription (e.g. fhirsubprocessnotify) and select all available FHIR Events
+![Events2](../docs/images/neventsetup2.png)
+6. Select endpoint type of Azure Function then click select an endpoint, select the FHIR Subscription Processor installation resource group and function app, the Production Slot and the SubscriptionEventGridProcessor function
+![Event3](../docs/images/neventsetup3.png)
+7. You may now add Subscription resources and you should start receiving notifications at your defined web-hook endpoint when resources are created/updated that meet criteria in the FHIR Server  
+
+### For FHIR Proxy Eventing (PublishEvents Module EventHub)
+1. [Access Azure Portal](https://portal.azure.com)
+2. Find and Select the Event Hubs Namespace configured from Publish Event Post-Processor module of the [FHIR proxy](https://github.com/microsoft/fhir-proxy/blob/main/docs/configuration.md#publish-event-post-processor)
+3. Select the ```fhirevents``` eventhub.
+![Events1](../docs/images/peventsetup1.png)
+4. Click on the ```+ Consumer group``` tab
+5. Enter name ```fhirsubprocess```
+6. Click the Create Button
+![Events2](../docs/images/peventsetup2.png)
+7. You may now add Subscription resources and you should start receiving notifications at your defined web-hook endpoint when resources are created/updated that meet criteria in the FHIR Server  
+
  
 
