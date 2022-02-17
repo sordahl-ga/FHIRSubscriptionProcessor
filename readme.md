@@ -1,9 +1,9 @@
 # FHIR Subscription Processor
 
-FHIR Subscription Processor is an Azure Function App solution that provides support for creation and monitor suppport for FHIR R4 Subscription resources:
- + Validates Criteria and Activates Subscription Monitoring 
+FHIR Subscription Processor is an Azure Function App solution that provides support for creation and monitor suppport for [FHIR R4 Subscription resources](https://build.fhir.org/subscription.html):
+ + Validates Criteria and Activates Subscription Monitoring upon Subscription Resource Create/Modify 
  + Supports rest-hook callback notifications
- + Complete Auditing, Error logging and Retry for notifications 
+ + Complete Auditing, Error logging and Retry for rest-hook notifications 
 
 ## Subscription Process Overview
 ![Subscription Processor](./docs/images/sequence.png)
@@ -25,7 +25,107 @@ git clone https://github.com/sordahl-ga/FHIRSubscriptionProcessor
 
 Detailed instructions can be found [here](./scripts/Readme.md)
 
+## Simple Use Example
+Let's say you want to monitor your severe diabetic population via a population management application.  This population management application exposes a rest-hook endpoint that will trigger a refresh workflow for diabetic patients when called, this workflow may include updating population, reasessing population risk scores, etc... You want to trigger this endpoint when any Patient is directly assigned a diabetic Condition with complications in the FHIR Server. You would execute the following steps to acheive this:</br>
+1. Deploy the FHIR Subscription Processor using instructions above.
+2. Using Postman or other HTTP Rest Client, Create a Subscription resource to monitor on the FHIR Server. This Subscription will trigger for Conditions created/updated with a Diabetic w/complication code(s):
+```
+{
+    "resourceType": "Subscription",
+    "status": "requested",
+    "contact": [
+        {
+            "system": "email",
+            "value": "fred@frog.com"
+        }
+    ],
+    "end": "2023-01-01T00:00:00+00:00",
+    "reason": "Alert on Diabetes with Complications Diagnosis",
+    "criteria": "Condition?code=http://hl7.org/fhir/sid/icd-10|E11.6",
+    "channel": {
+        "type": "rest-hook",
+        "endpoint": "https://mypopulation.management.app/severediabeticpopulationnotify",
+        "header":[
+           "Authorization: Bearer token1234"
+        ]
+    }
+}
+``` 
+<I>Note: This is a POST command to the endpoint you can specify any needed access or instruction HTTP headers in the headers field of the channel definition.</I></br></br> 
+3. Retrieve the Subscription resource using the logical ID returned and make sure it's status has been switched to active
+```
+{
+    "resourceType": "Subscription",
+    "id": "1061ca9e-fa7d-4f95-8054-8c96b31269b3",
+    "meta": {
+              "versionId": "22",
+              "lastUpdated": "2021-05-06T13:23:03.711+00:00"
+    },
+    "status": "active",
+    "contact": [
+        {
+            "system": "email",
+            "value": "fred@frog.com"
+        }
+    ],
+    "end": "2023-01-01T00:00:00+00:00",
+    "reason": "Alert on Diabetes with Complications Diagnosis",
+    "criteria": "Condition?code=http://hl7.org/fhir/sid/icd-10|E11.6",
+    "channel": {
+        "type": "rest-hook",
+        "endpoint": "https://mypopulation.management.app/severediabeticpopulationnotify",
+        "header":[
+           "Authorization: Bearer token1234"
+        ]
+    }
+}
+```
+4. Create a Diabetes w/Complications Condition on a Patient. Example:
+```
 
+                "resourceType": "Condition",
+                "verificationStatus": {
+                    "coding": [
+                        {
+                            "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+                            "code": "confirmed"
+                        }
+                    ]
+                },
+                "category": [
+                    {
+                        "coding": [
+                            {
+                                "system": "http://snomed.info/sct",
+                                "code": "439401001",
+                                "display": "Diagnosis"
+                            }
+                        ]
+                    }
+                ],
+                "code": {
+                    "coding": [
+                        {
+                            "system": "http://hl7.org/fhir/sid/icd-10",
+                            "code": "E11.6",
+                            "display": "Type 2 diabetes mellitus with other specified complications"
+                        }
+                    ],
+                    "text": "Type 2 diabetes mellitus with other specified complications"
+                },
+                "subject": {
+                    "reference": "Patient/ef3866f6-a344-3ff5-98be-02b311758f46"
+                },
+                "onsetDateTime": "2022-02-02T00:00:00Z"
+                
+            }
+```
+5. The application endpoint you specified in the Subscription will be triggered within a short while of the Condition creation.
+</br><I>Note: The application endpoint needs to be reachable from the FHIR Subscription Processor function application. Check your outbound configuration to make sure the call will succeed.</I>
+6. The FHIR Subscription processor will automatically retry endpoints with transient failures up to a default 5 times waiting a default 30 seconds between attempts.
+7. The FHIR Subscription processor will deadletter failed notifications and mark the Subscription in error resulting from more than 5 retries or permamnent HTTP failures.  
+8. You can retrieve the Subscription resource to see errors or use the Application Insights Logs for details of failures.
+  
 # Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
