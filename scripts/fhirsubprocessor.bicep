@@ -244,7 +244,7 @@ resource functionAppDeployment 'Microsoft.Web/sites/sourcecontrols@2021-03-01' =
   parent: functionApp
   properties: {
     repoUrl: repoUrl
-    branch: 'main'
+    branch: 'master'
     isManualIntegration: true
   }
 }

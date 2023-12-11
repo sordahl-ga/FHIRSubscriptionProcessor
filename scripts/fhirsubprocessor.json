@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.23.1.45101",
-      "templateHash": "10890911043489406369"
+      "templateHash": "17380621432755911892"
     }
   },
   "parameters": {
@@ -368,7 +368,7 @@
       "name": "[format('{0}/{1}', format('{0}-func', variables('prefixNameCleanShort')), 'web')]",
       "properties": {
         "repoUrl": "[variables('repoUrl')]",
-        "branch": "main",
+        "branch": "master",
         "isManualIntegration": true
       },
       "dependsOn": [
