@@ -35,8 +35,8 @@
                     {
                         "name": "resourcePrefix",
                         "type": "Microsoft.Common.TextBox",
-                        "label": "Prefix for FHIR Bulk Import resources.",
-                        "defaultValue": "bulk",
+                        "label": "Prefix for FHIR Subscription processor resources.",
+                        "defaultValue": "fsp",
                         "multiLine": false,
                         "constraints": {
                             "required": true,
