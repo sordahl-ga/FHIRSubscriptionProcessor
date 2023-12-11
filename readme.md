@@ -18,7 +18,7 @@ FHIR Subscription Processor is an Azure Function App solution that provides supp
 
 ### Portal Deployment
 To quickly deploy the FHIR Subscription Processor, you can use the Azure deployment button:</br> 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/healtharchitectures.onmicrosoft.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsordahl-ga%2FFHIRSubscriptionProcessor%2Fmaster%2Fscripts%2Ffhirsubprocessor.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fsordahl-ga%2FFHIRSubscriptionProcessor%2Fmaster%2Fscripts%2FcreateUiDefinition.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsordahl-ga%2FFHIRSubscriptionProcessor%2Fmaster%2Fscripts%2Ffhirsubprocessor.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fsordahl-ga%2FFHIRSubscriptionProcessor%2Fmaster%2Fscripts%2FcreateUiDefinition.json)
 
 ## Simple Use Example
 Let's say you want to monitor your severe diabetic population via a population management application.  This population management application exposes a rest-hook endpoint that will trigger a refresh workflow for diabetic patients when called, this workflow may include updating population, reasessing population risk scores, etc... You want to trigger this endpoint when any Patient is directly assigned a diabetic Condition with complications in the FHIR Server. You would execute the following steps to acheive this:</br>

@@ -81,7 +81,9 @@ WEBSITE_RUN_FROM_PACKAGE                            | 1      | Optional - sets a
 5. Provide a name for your subscription (e.g. fhirsubprocessnotify) and select all available FHIR Events
 ![Events2](../docs/images/neventsetup2.png)
 6. Select endpoint type of Storage Queue then click select an endpoint, select the storage account installed with the FHIR Subscription Processor function, select exiting queue then select the ```fhirsubprocessorqueue```
-7. You may now add Subscription resources and you should start receiving notifications at your defined web-hook endpoint when resources are created/updated that meet criteria in the FHIR Server  
+7. If you have more than one FHIR Service you can filter to the specified FHIR Service by: Select the filters tab, Check the enable subject filtering, enter the name of your FHIR Service in the Subject begins with filter textbox.  
+8. Click the Create Button
+9. You may now add Subscription resources and you should start receiving notifications at your defined web-hook endpoint when resources are created/updated that meet criteria in the FHIR Server  
 
 ### For FHIR Proxy Eventing (PublishEvents Module EventHub)
 1. [Access Azure Portal](https://portal.azure.com)
