@@ -1,22 +1,15 @@
 # FHIR Subscription Processor Getting Started with Deploy Scripts
-In this document, we go over the deploy scripts necessary for installing FHIR Subscription Processor. We cover the order of script execution and the steps needed to complete the install.
+In this document, we go over the deployment steps necessary for installing FHIR Subscription Processor. We cover the order of the steps to be executed, application settings and prerequisites.
 
-## Errata 
-There are no open issues at this time. 
 
 ## Prerequisites 
 
-These scripts will gather (and export) information necessary for the proper deployment and configuration of FHIR Subscription Processor. Credentials and other secure information will be stored in the existing Key Vault attached to your FHIR Service/FHIR Proxy deployment or in a newly created keyvault with this deployment.
+These steps will gather (and export) information necessary for the proper deployment and configuration of FHIR Subscription Processor. Credentials and other secure information will be stored in app settings for the FHIR Subscription Processor function app.
+Note: It is strongly recommended to use the MSI credentials option for access
 
  - User must have FHIR Server (OSS)/Azure API for FHIR/Azure Healthcare APIs FHIR Service already deployed and set up
  - User must have either native Eventing for Azure HealthcareAPIs or FHIR Proxy eventing module configured for OSS/Azure API for FHIR
  - User must have rights to deploy resources at the Azure Subscription scope (i.e., Contributor role or above).
-
-__Note:__
-FHIR Service and FHIR-Proxy use a Key Vault for securing Service Client credentials. Because the ```deploysubprocessor.bash``` script scans the Key Vault for FHIR Service and FHIR-Proxy values, only one Key Vault should be used in your Resource Group. If multiple Key Vaults have been deployed in your Resource Group, please use the [backup and restore](https://docs.microsoft.com/en-us/azure/key-vault/general/backup?tabs=azure-cli) option to copy values to one Key Vault.
-
-__Note:__ 
-The FHIR Subscription Processor scripts are designed and tested for the [Azure Cloud Shell - Bash Shell](https://docs.microsoft.com/en-us/azure/cloud-shell/features#:~:text=Azure%20Cloud%20Shell%20is%20a,and%20maintaining%20a%20machine%20yourself.) environment.
 
 
 ### Naming & Tagging
@@ -24,7 +17,7 @@ All Azure resource types have a scope in which resource names must be unique. So
 
 Resource Type    | Deploy App Name   | Number      | Resource Name Example (automatically generated)
 ------------|-----------------|-------------|------------------------------------------------
-fsp-        | sub            | random      | sfp-sub123456
+fsp-        | sub            | random      | sfpsub123456
 
 Azure Resources deployed with this script are automatically tagged with their origin and deployment name (see example below). Users are able to add/change [Tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/tag-resources?tabs=json) after installation.
 
@@ -35,45 +28,11 @@ HealthArchitectures | FHIRSubscription
 ---
 
 ## Getting Started
-Please note you should deploy these components into a tenant and subscription where you have appropriate permissions to create and manage Application Registrations (ie Application Adminitrator RBAC Role or Global Administrator in AAD), and can deploy Resources at the Subscription Scope. 
+Please note you should deploy these components into a tenant and subscription where you have appropriate permissions to create,manage and deploy Resources at the Subscription Scope. 
 
-Launch Azure Cloud Shell (Bash Environment)
-
-**CTRL+click** (Windows or Linux) or **CMD+click** (Mac) to open in a new window or tab   
-
-[![Launch Azure Shell](/docs/images/launchcloudshell.png)Launch Cloud Shell](https://shell.azure.com/bash?target="_blank")
-
-Clone the repo to your Bash Shell (CLI) environment 
-```azurecli-interactive
-git clone https://github.com/sordahl-ga/FHIRSubscriptionProcessor 
-```
-Change working directory to the repo Scripts directory
-```azurecli-interactive
-cd $HOME/FHIRSubscriptionProcessor/scripts
-```
-
-Make the Bash Shell Scripts used for Deployment and Setup executable 
-```azurecli-interactive
-chmod +x *.bash 
-```
-
-## Step 1.  deploysubprocessor.bash
-This is the main component deployment script for the FHIR Subscription Processor components and application code.  Note that retry logic is used to account for provisioning delays (e.g., networking provisioning is taking some extra time).  Default retry logic is 5 retries.    
-
-Ensure you are in the proper directory 
-```azurecli-interactive
-cd $HOME/FHIRSubscriptionProcessor/scripts
-``` 
-
-Launch the deploysubprocessor.bash shell script 
-```azurecli-interactive
-./deploysubprocessor.bash 
-``` 
-
-Optionally the deployment script can be used with command line options 
-```azurecli
-./deploysubprocessor.bash -i <subscriptionId> -g <resourceGroupName> -l <resourceGroupLocation> -n <deployPrefix> -k <keyVaultName> -o <native or proxy>
-```
+## Step 1.  Portal Deployment
+To quickly deploy the FHIR Subscription Processor, you can use the Azure deployment button:</br> 
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsordahl-ga%2FFHIRSubscriptionProcessor%2Fmaster%2Fscripts%2Ffhirsubprocessor.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fsordahl-ga%2FFHIRSubscriptionProcessor%2Fmaster%2Fscripts%2FcreateUiDefinition.json)
 
 
 Azure Components installed 
@@ -81,20 +40,8 @@ Azure Components installed
  - Function App Service plan 
  - ServiceBus Namspace, Topic and Subscription
  - Azure Cache for REDIS
- - Keyvault (if none exist)
-
-Information needed by this script 
- - Subscription
- - Resource Group Name and Location 
- - Keyvault Name 
-
-This script prompts users for the existing Key Vault name, searches for FHIR Service values in the Key Vault, and if found, loads them. Otherwise the script prompts users for the FHIR Service 
- - Client ID
- - Resource 
- - Tenant Name
- - URL 
-
-FHIR Subscription Processor Application Configuration values loaded by this script 
+ 
+FHIR Subscription Processor Application Configuration values loaded by this template 
 
 Name                               | Value                      | Located              
 -----------------------------------|----------------------------|--------------------
@@ -125,16 +72,15 @@ WEBSITE_RUN_FROM_PACKAGE                            | 1      | Optional - sets a
 
 ## Step 2. Post Installation
 
-### For Native Eventing (HealthCare APIs EventGrid)
+### For Native Eventing (HealthCare Data Services EventGrid)
 1. [Access Azure Portal](https://portal.azure.com)
-2. Find and Select Your Azure Healthcare APIs Workspace for your FHIR Server
+2. Find and Select Your Azure Health Data Services Workspace for your FHIR Server
 3. Select the Events section on the left hand navigation window
 4. Click on the ```+ Event Subscription``` tab
 ![Events1](../docs/images/neventsetup1.png)
 5. Provide a name for your subscription (e.g. fhirsubprocessnotify) and select all available FHIR Events
 ![Events2](../docs/images/neventsetup2.png)
-6. Select endpoint type of Azure Function then click select an endpoint, select the FHIR Subscription Processor installation resource group and function app, the Production Slot and the SubscriptionEventGridProcessor function
-![Event3](../docs/images/neventsetup3.png)
+6. Select endpoint type of Storage Queue then click select an endpoint, select the storage account installed with the FHIR Subscription Processor function, select exiting queue then select the ```fhirsubprocessorqueue```
 7. You may now add Subscription resources and you should start receiving notifications at your defined web-hook endpoint when resources are created/updated that meet criteria in the FHIR Server  
 
 ### For FHIR Proxy Eventing (PublishEvents Module EventHub)

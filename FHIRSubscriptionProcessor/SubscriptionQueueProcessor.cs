@@ -1,30 +1,27 @@
-// Default URL for triggering event grid function in the local environment.
-// http://localhost:7071/runtime/webhooks/EventGrid?functionName={functionname}
 using System;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.EventGrid.Models;
-using Microsoft.Azure.WebJobs.Extensions.EventGrid;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
-using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs.ServiceBus;
+
+using Azure.Messaging.ServiceBus;
 
 namespace FHIRSubscriptionProcessor
 {
-    public static class EventGridProcessor
+    public class SubscriptionQueueProcessor
     {
-        [FunctionName("SubscriptionEventGridProcessor")]
-        public static async Task Run([EventGridTrigger]EventGridEvent eventGridEvent,
-                                     [ServiceBus("%FSP-NOTIFYSB-TOPIC%", Connection = "FSP-NOTIFYSB-CONNECTION", EntityType = EntityType.Topic)] IAsyncCollector<Message> outputTopic,
+        [FunctionName("SubscriptionQueueProcessor")]
+        public async Task Run([QueueTrigger("%FSP-STORAGEQUEUENAME%", Connection = "FSP-STORAGEACCOUNT")] JObject fhirevent,
+                              [ServiceBus("%FSP-NOTIFYSB-TOPIC%", Connection = "FSP-NOTIFYSB-CONNECTION", EntityType = ServiceBusEntityType.Topic)] IAsyncCollector<ServiceBusMessage> outputTopic,
                                      ILogger log)
         {
-            log.LogInformation($"SubscriptionEventGridProcessor: Processing event type:{eventGridEvent.EventType} data:{eventGridEvent.Data.ToString()}");
+            string eventtype = fhirevent["eventType"].ToString();
+            log.LogInformation($"SubscriptionEventGridProcessor: Processing event type:{fhirevent["eventType"].ToString()} data:{fhirevent["data"].ToString(Newtonsoft.Json.Formatting.None)}");
             try
             {
                 string action = "";
-                switch (eventGridEvent.EventType)
+                switch (eventtype)
                 {
                     case "Microsoft.HealthcareApis.FhirResourceCreated":
                         action = "Created";
@@ -37,7 +34,7 @@ namespace FHIRSubscriptionProcessor
                         break;
 
                 }
-                JObject m = JObject.Parse(eventGridEvent.Data.ToString());
+                JToken m = fhirevent["data"];
                 if (!m["ResourceType"].IsNullOrEmpty() && m["ResourceType"].ToString().Equals("Subscription"))
                 {
                     await EventHubProcessor.ProcessSubscription(m["ResourceFhirId"].ToString(),action, log);

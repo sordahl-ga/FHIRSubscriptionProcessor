@@ -1,0 +1,530 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.23.1.45101",
+      "templateHash": "10890911043489406369"
+    }
+  },
+  "parameters": {
+    "prefix": {
+      "type": "string",
+      "defaultValue": "fsp",
+      "metadata": {
+        "description": "Prefix for all resources"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    },
+    "fhirType": {
+      "type": "string",
+      "defaultValue": "FhirService",
+      "allowedValues": [
+        "FhirService",
+        "APIforFhir",
+        "FhirServer"
+      ],
+      "metadata": {
+        "description": "Type of FHIR instance to integrate the subscription processor with."
+      }
+    },
+    "fhirServiceName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of the FHIR Service. Format is \"workspace/fhirService\"."
+      }
+    },
+    "apiForFhirName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of the API for FHIR"
+      }
+    },
+    "fhirServerUrl": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The full URL of the OSS FHIR Server"
+      }
+    },
+    "authenticationType": {
+      "type": "string",
+      "defaultValue": "managedIdentity",
+      "allowedValues": [
+        "managedIdentity",
+        "servicePrincipal"
+      ],
+      "metadata": {
+        "description": "Type of FHIR authentication."
+      }
+    },
+    "appServiceSize": {
+      "type": "string",
+      "defaultValue": "B1",
+      "allowedValues": [
+        "B1",
+        "B2",
+        "B3",
+        "S1",
+        "S2",
+        "S3",
+        "P1v2",
+        "P2v2",
+        "P3v2",
+        "P1v3",
+        "P2v3",
+        "P3v3"
+      ],
+      "metadata": {
+        "description": "Size of the app service to run loader function"
+      }
+    },
+    "serviceAccountClientId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "If not using MSI, client ID of the service account used to connect to the FHIR Server"
+      }
+    },
+    "serviceAccountSecret": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "If not using MSI, client secret of the service account used to connect to the FHIR Server"
+      }
+    },
+    "fhirAudience": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Audience used for FHIR Server tokens. Leave blank to use the FHIR url which will work for default FHIR deployments."
+      }
+    },
+    "createRoleAssignment": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Automatically create a role assignment for the function app to access the FHIR service."
+      }
+    },
+    "fhirContributorRoleAssignmentId": {
+      "type": "string",
+      "defaultValue": "5a1fc7df-4bf1-4951-a576-89034ee01acd",
+      "metadata": {
+        "description": "The FHIR Subscription processor function app needs to access the FHIR service. This is the role assignment ID to use."
+      }
+    }
+  },
+  "variables": {
+    "repoUrl": "https://github.com/sordahl-ga/FHIRSubscriptionProcessor",
+    "fhirUrl": "[if(equals(parameters('fhirType'), 'FhirService'), format('https://{0}.fhir.azurehealthcareapis.com', replace(parameters('fhirServiceName'), '/', '-')), if(equals(parameters('fhirType'), 'APIforFhir'), format('https://{0}.azurehealthcareapis.com', parameters('apiForFhirName')), parameters('fhirServerUrl')))]",
+    "tenantId": "[subscription().tenantId]",
+    "appTags": {
+      "AppID": "fhir-subscriptionprocessor-function"
+    },
+    "uniqueResourceIdentifier": "[substring(uniqueString(resourceGroup().id, parameters('prefix')), 0, 4)]",
+    "prefixNameClean": "[format('{0}{1}', replace(parameters('prefix'), '-', ''), variables('uniqueResourceIdentifier'))]",
+    "prefixNameCleanShort": "[if(greater(length(variables('prefixNameClean')), 16), substring(variables('prefixNameClean'), 0, 8), variables('prefixNameClean'))]",
+    "sblistkeysep": "[format('{0}/AuthorizationRules/RootManageSharedAccessKey', resourceId('Microsoft.ServiceBus/namespaces', format('{0}sb', variables('prefixNameCleanShort'))))]",
+    "fhirUrlClean": "[replace(split(variables('fhirUrl'), '.')[0], 'https://', '')]",
+    "fhirUrlCleanSplit": "[split(variables('fhirUrlClean'), '-')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2021-08-01",
+      "name": "[format('{0}/{1}', format('{0}stor', variables('prefixNameCleanShort')), 'default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', format('{0}stor', variables('prefixNameCleanShort')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2021-03-01",
+      "name": "[format('{0}/{1}', format('{0}-func', variables('prefixNameCleanShort')), 'web')]",
+      "properties": {
+        "ftpsState": "Disabled",
+        "minTlsVersion": "1.2"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', format('{0}-func', variables('prefixNameCleanShort')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+      "apiVersion": "2021-03-01",
+      "name": "[format('{0}/{1}', format('{0}-func', variables('prefixNameCleanShort')), 'ftp')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "allow": false
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', format('{0}-func', variables('prefixNameCleanShort')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+      "apiVersion": "2021-03-01",
+      "name": "[format('{0}/{1}', format('{0}-func', variables('prefixNameCleanShort')), 'scm')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "allow": false
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', format('{0}-func', variables('prefixNameCleanShort')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ServiceBus/namespaces",
+      "apiVersion": "2021-06-01-preview",
+      "name": "[format('{0}sb', variables('prefixNameCleanShort'))]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Standard"
+      },
+      "metadata": {
+        "description": "ServiceBus used for subscription processor"
+      }
+    },
+    {
+      "type": "Microsoft.ServiceBus/namespaces/topics",
+      "apiVersion": "2021-06-01-preview",
+      "name": "[format('{0}/{1}', format('{0}sb', variables('prefixNameCleanShort')), 'notifyfhirsub')]",
+      "properties": {
+        "defaultMessageTimeToLive": "P6M",
+        "status": "Active"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ServiceBus/namespaces', format('{0}sb', variables('prefixNameCleanShort')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ServiceBus/namespaces/topics/subscriptions",
+      "apiVersion": "2021-06-01-preview",
+      "name": "[format('{0}/{1}/{2}', format('{0}sb', variables('prefixNameCleanShort')), 'notifyfhirsub', 'channelnotify')]",
+      "properties": {
+        "deadLetteringOnMessageExpiration": true,
+        "defaultMessageTimeToLive": "P6M",
+        "lockDuration": "PT5M",
+        "maxDeliveryCount": 20,
+        "status": "Active"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ServiceBus/namespaces/topics', format('{0}sb', variables('prefixNameCleanShort')), 'notifyfhirsub')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2020-06-01",
+      "name": "[format('{0}redis', variables('prefixNameCleanShort'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "enableNonSslPort": false,
+        "minimumTlsVersion": "1.2",
+        "sku": {
+          "capacity": 1,
+          "family": "C",
+          "name": "Standard"
+        }
+      },
+      "metadata": {
+        "description": "Redis Cache used for subscription processor"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-08-01",
+      "name": "[format('{0}stor', variables('prefixNameCleanShort'))]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "metadata": {
+        "description": "Storage account used for function app"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/queueServices",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}/{1}', format('{0}stor', variables('prefixNameCleanShort')), 'default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', format('{0}stor', variables('prefixNameCleanShort')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}/{1}/{2}', format('{0}stor', variables('prefixNameCleanShort')), 'default', 'fhirsubprocessorqueue')]",
+      "properties": {
+        "metadata": {}
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/queueServices', format('{0}stor', variables('prefixNameCleanShort')), 'default')]"
+      ],
+      "metadata": {
+        "description": "Storage Queue for FHIR Subscription processing"
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2021-03-01",
+      "name": "[format('{0}-app', variables('prefixNameCleanShort'))]",
+      "location": "[parameters('location')]",
+      "kind": "functionapp",
+      "sku": {
+        "name": "[parameters('appServiceSize')]"
+      },
+      "properties": {
+        "targetWorkerCount": 2
+      },
+      "tags": "[variables('appTags')]",
+      "metadata": {
+        "description": "App Service used to run Azure Function"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2021-03-01",
+      "name": "[format('{0}-func', variables('prefixNameCleanShort'))]",
+      "location": "[parameters('location')]",
+      "kind": "functionapp",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "httpsOnly": true,
+        "enabled": true,
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('{0}-app', variables('prefixNameCleanShort')))]",
+        "clientAffinityEnabled": false,
+        "siteConfig": {
+          "alwaysOn": true,
+          "appSettings": [
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            }
+          ]
+        }
+      },
+      "tags": "[variables('appTags')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', format('{0}-app', variables('prefixNameCleanShort')))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', format('{0}stor', variables('prefixNameCleanShort')))]"
+      ],
+      "metadata": {
+        "description": "Azure Function used to run subscription processor"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2021-03-01",
+      "name": "[format('{0}/{1}', format('{0}-func', variables('prefixNameCleanShort')), 'appsettings')]",
+      "properties": {
+        "AzureWebJobsStorage": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', format('{0}stor', variables('prefixNameCleanShort')), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', format('{0}stor', variables('prefixNameCleanShort'))), '2021-08-01').keys[0].value)]",
+        "FUNCTIONS_EXTENSION_VERSION": "~4",
+        "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+        "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('Microsoft.Insights/components', format('{0}-ai', variables('prefixNameCleanShort'))), '2020-02-02-preview').InstrumentationKey]",
+        "APPLICATIONINSIGHTS_CONNECTION_STRING": "[reference(resourceId('Microsoft.Insights/components', format('{0}-ai', variables('prefixNameCleanShort'))), '2020-02-02-preview').ConnectionString]",
+        "SCM_DO_BUILD_DURING_DEPLOYMENT": "true",
+        "AzureFunctionsJobHost__functionTimeout": "01:00:00",
+        "AzureWebJobs.SubscriptionEventHubProcessor.Disabled": "1",
+        "FSP-STORAGEACCOUNT": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', format('{0}stor', variables('prefixNameCleanShort')), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', format('{0}stor', variables('prefixNameCleanShort'))), '2021-08-01').keys[0].value)]",
+        "FS-URL": "[variables('fhirUrl')]",
+        "FS-RESOURCE": "[if(empty(parameters('fhirAudience')), variables('fhirUrl'), parameters('fhirAudience'))]",
+        "FS-TENANT-NAME": "[variables('tenantId')]",
+        "FS-ISMSI": "[if(equals(parameters('authenticationType'), 'managedIdentity'), 'true', 'false')]",
+        "FS-CLIENT-ID": "[if(equals(parameters('authenticationType'), 'servicePrincipal'), parameters('serviceAccountClientId'), '')]",
+        "FS-SECRET": "[if(equals(parameters('authenticationType'), 'servicePrincipal'), parameters('serviceAccountSecret'), '')]",
+        "FSP-STORAGEQUEUENAME": "fhirsubprocessorqueue",
+        "FSP-REDISCONNECTION": "[format('{0}redis.redis.cache.windows.net,abortConnect=false,ssl=true,password={1}', variables('prefixNameCleanShort'), listKeys(resourceId('Microsoft.Cache/redis', format('{0}redis', variables('prefixNameCleanShort'))), '2020-06-01').primaryKey)]",
+        "FSP-NOTIFYSB-CONNECTION": "[format('Endpoint=sb://{0}.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey={1}', format('{0}sb', variables('prefixNameCleanShort')), listKeys(variables('sblistkeysep'), '2021-06-01-preview').primaryKey)]",
+        "FSP-NOTIFYSB-SUBSCRIPTION": "channelnotify",
+        "FSP-NOTIFYSB-TOPIC": "notifyfhirsub"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', format('{0}-ai', variables('prefixNameCleanShort')))]",
+        "[resourceId('Microsoft.Web/sites', format('{0}-func', variables('prefixNameCleanShort')))]",
+        "[resourceId('Microsoft.Cache/redis', format('{0}redis', variables('prefixNameCleanShort')))]",
+        "[resourceId('Microsoft.ServiceBus/namespaces/topics/subscriptions', format('{0}sb', variables('prefixNameCleanShort')), 'notifyfhirsub', 'channelnotify')]",
+        "[resourceId('Microsoft.ServiceBus/namespaces/topics', format('{0}sb', variables('prefixNameCleanShort')), 'notifyfhirsub')]",
+        "[resourceId('Microsoft.ServiceBus/namespaces', format('{0}sb', variables('prefixNameCleanShort')))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', format('{0}stor', variables('prefixNameCleanShort')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites/sourcecontrols",
+      "apiVersion": "2021-03-01",
+      "name": "[format('{0}/{1}', format('{0}-func', variables('prefixNameCleanShort')), 'web')]",
+      "properties": {
+        "repoUrl": "[variables('repoUrl')]",
+        "branch": "main",
+        "isManualIntegration": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', format('{0}-func', variables('prefixNameCleanShort')))]"
+      ],
+      "metadata": {
+        "description": "Uses source control deploy if requested"
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02-preview",
+      "name": "[format('{0}-ai', variables('prefixNameCleanShort'))]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web"
+      },
+      "tags": "[variables('appTags')]",
+      "metadata": {
+        "description": "Monitoring for Function App"
+      }
+    },
+    {
+      "condition": "[and(equals(parameters('fhirType'), 'FhirService'), equals(parameters('createRoleAssignment'), true()))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "functionFhirServiceRoleAssignment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "resourceId": {
+            "value": "[resourceId('Microsoft.HealthcareApis/workspaces/fhirservices', split(concat(variables('fhirUrlCleanSplit')[0], '/', join(skip(variables('fhirUrlCleanSplit'), 1), '-')), '/')[0], split(concat(variables('fhirUrlCleanSplit')[0], '/', join(skip(variables('fhirUrlCleanSplit'), 1), '-')), '/')[1])]"
+          },
+          "roleId": {
+            "value": "[parameters('fhirContributorRoleAssignmentId')]"
+          },
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.Web/sites', format('{0}-func', variables('prefixNameCleanShort'))), '2021-03-01', 'full').identity.principalId]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "9863366137567356585"
+            }
+          },
+          "parameters": {
+            "resourceId": {
+              "type": "string"
+            },
+            "roleId": {
+              "type": "string"
+            },
+            "principalId": {
+              "type": "string"
+            },
+            "principalType": {
+              "type": "string",
+              "defaultValue": "ServicePrincipal"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-04-01-preview",
+              "name": "[guid(parameters('resourceId'), parameters('principalId'), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('roleId')))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('roleId'))]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "[parameters('principalType')]"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', format('{0}-func', variables('prefixNameCleanShort')))]"
+      ],
+      "metadata": {
+        "description": "Setup access between FHIR and the deployment script managed identity"
+      }
+    },
+    {
+      "condition": "[and(equals(parameters('fhirType'), 'APIforFhir'), equals(parameters('createRoleAssignment'), true()))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "bulk-import-function-fhir-managed-id-role-assignment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "resourceId": {
+            "value": "[resourceId('Microsoft.HealthcareApis/services', variables('fhirUrlClean'))]"
+          },
+          "roleId": {
+            "value": "[parameters('fhirContributorRoleAssignmentId')]"
+          },
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.Web/sites', format('{0}-func', variables('prefixNameCleanShort'))), '2021-03-01', 'full').identity.principalId]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "9863366137567356585"
+            }
+          },
+          "parameters": {
+            "resourceId": {
+              "type": "string"
+            },
+            "roleId": {
+              "type": "string"
+            },
+            "principalId": {
+              "type": "string"
+            },
+            "principalType": {
+              "type": "string",
+              "defaultValue": "ServicePrincipal"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-04-01-preview",
+              "name": "[guid(parameters('resourceId'), parameters('principalId'), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('roleId')))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('roleId'))]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "[parameters('principalType')]"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', format('{0}-func', variables('prefixNameCleanShort')))]"
+      ],
+      "metadata": {
+        "description": "Setup access between FHIR and the deployment script managed identity"
+      }
+    }
+  ]
+}

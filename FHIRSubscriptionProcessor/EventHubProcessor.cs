@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Azure.EventHubs;
-using Microsoft.Azure.ServiceBus;
+using Azure.Messaging.EventHubs;
+using Azure.Messaging.ServiceBus;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Extensions.Logging;
@@ -19,7 +21,7 @@ namespace FHIRSubscriptionProcessor
         public static readonly string TYPECACHEPREFIX = "sx-types-";
         [FunctionName("SubscriptionEventHubProcessor")]
         public static async Task Run([EventHubTrigger("%FP-MOD-EVENTHUB-NAME%", ConsumerGroup = "%FSP-CONSUMERGROUPNAME%", Connection = "FP-MOD-EVENTHUB-CONNECTION")] EventData[] events,
-                                     [ServiceBus("%FSP-NOTIFYSB-TOPIC%", Connection = "FSP-NOTIFYSB-CONNECTION", EntityType = EntityType.Topic)] IAsyncCollector<Message> outputTopic,
+                                     [ServiceBus("%FSP-NOTIFYSB-TOPIC%", Connection = "FSP-NOTIFYSB-CONNECTION", EntityType = ServiceBusEntityType.Topic)] IAsyncCollector<ServiceBusMessage> outputTopic,
                                      ILogger log)
         {
             var exceptions = new List<Exception>();
@@ -28,7 +30,7 @@ namespace FHIRSubscriptionProcessor
             {
                 try
                 {
-                    string messageBody = Encoding.UTF8.GetString(eventData.Body.Array, eventData.Body.Offset, eventData.Body.Count);
+                    string messageBody = Encoding.UTF8.GetString(eventData.EventBody);
                     //  string msg = "{\"action\":\"" + action + "\",\"resourcetype\":\"" + resource.FHIRResourceType() + "\",\"id\":\"" + resource.FHIRResourceId() + "\",\"version\":\"" + resource.FHIRVersionId() + "\",\"lastupdated\":\"" + resource.FHIRLastUpdated() + "\"}";
                     //Parse Msg into JObject
                     log.LogInformation($"Processing message:{messageBody}");
@@ -59,7 +61,7 @@ namespace FHIRSubscriptionProcessor
             if (exceptions.Count == 1)
                 throw exceptions.Single();
         }
-        public static async Task ProcessResourceEvent(string restype,string resid, string action, IAsyncCollector<Message> outputTopic,ILogger log)
+        public static async Task ProcessResourceEvent(string restype,string resid, string action, IAsyncCollector<ServiceBusMessage> outputTopic,ILogger log)
         {
             List<string> idsbytype = loadSubscriptionIdsByType(restype, log);
             if (idsbytype.Count == 0)
@@ -89,16 +91,16 @@ namespace FHIRSubscriptionProcessor
                 if (string.IsNullOrEmpty(criteria)) return;
                 criteria += $"&_id={resid}";
                 log.LogInformation($"ProcessResourceEvent: Evalutating Subscription/{id} criteria:{criteria}");
-                var result = await FHIRClient.CallFHIRServer(criteria, "", "GET", log);
-                if (result.IsSuccess())
+                var result = await FHIRUtils.CallFHIRServer(criteria, "", HttpMethod.Get, log);
+                if (result.Success)
                 {
-                    JToken fhirresp = result.toJToken();
+                    JToken fhirresp = JObject.Parse(result.Content);
                     if (!fhirresp["entry"].IsNullOrEmpty())
                     {
                         //Resource met criteria so lets queue it to the notify processor
                         log.LogInformation($"ProcessResourceEvent: {restype}/{resid} met criteria for Subscription/{id} Adding to notify queue...");
-                        Message msg = new Message();
-                        msg.Body = Encoding.UTF8.GetBytes(id);
+                        ServiceBusMessage msg = new ServiceBusMessage();
+                        msg.Body = BinaryData.FromString(id);
                         await outputTopic.AddAsync(msg);
                     } else
                     {
@@ -116,13 +118,13 @@ namespace FHIRSubscriptionProcessor
                 {
                     case "Created":
                     case "Updated":
-                        var fhirresp = await FHIRClient.CallFHIRServer($"Subscription/{id}", null, "GET", log);
-                        if (!fhirresp.IsSuccess())
+                        var fhirresp = await FHIRUtils.CallFHIRServer($"Subscription/{id}", null, HttpMethod.Get, log);
+                        if (!fhirresp.Success)
                         {
                             log.LogError($"ProcessSubscription: Subscription {id} does not exist on FHIR Server");
                             return;
                         }
-                        JToken t = fhirresp.toJToken();
+                        JToken t = JObject.Parse(fhirresp.Content);
                         string status = (t["status"].IsNullOrEmpty() ? "" : t["status"].ToString());
                         string criteria = t["criteria"].ToString();
                         //For Status off or error remove the cache subscription and thats it no changes to resource on Server
@@ -158,11 +160,11 @@ namespace FHIRSubscriptionProcessor
                                 else
                                 {
                                     //Try criteria query see if it's valid
-                                    var result = await FHIRClient.CallFHIRServer(criteria, "", "GET", log);
-                                    if (!result.IsSuccess())
+                                    var result = await FHIRUtils.CallFHIRServer(criteria, "", HttpMethod.Get, log);
+                                    if (!result.Success)
                                     {
                                         t["status"] = "error";
-                                        t["error"] = $"ProcessSubscription: Criteria is invalid on the FHIR Server Subscription/{id}: {result}";
+                                        t["error"] = $"ProcessSubscription: Criteria is invalid on the FHIR Server Subscription/{id}: {result.Status}-{result.Content}";
                                     }
                                     else
                                     {
@@ -196,10 +198,10 @@ namespace FHIRSubscriptionProcessor
         public static async Task<FHIRResponse> updateFHIRSubscription(string id,string body,ILogger log)
         {
             log.LogInformation($"updateFHIRSubscription: Updating Subscription/{id} on FHIR server");
-            var saveresult = await FHIRClient.CallFHIRServer($"Subscription/{id}",body, "PUT", log);
-            if (!saveresult.IsSuccess())
+            var saveresult = await FHIRUtils.CallFHIRServer($"Subscription/{id}",body, HttpMethod.Put, log);
+            if (!saveresult.Success)
             {
-                log.LogError($"ProcessSubscription:Error updating resource Subscription/{id} on FHIR Server: {saveresult}");
+                log.LogError($"ProcessSubscription:Error updating resource Subscription/{id} on FHIR Server: {saveresult.Status}-{saveresult.Content}");
                 removeSubscriptionCache(id, log);
             }
             return saveresult;

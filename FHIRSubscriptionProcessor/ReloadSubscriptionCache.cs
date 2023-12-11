@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Net.Http;
 
 namespace FHIRSubscriptionProcessor
 {
@@ -40,10 +41,10 @@ namespace FHIRSubscriptionProcessor
                             }
                         }
                         log.LogInformation("Reloading subscription cache....");
-                        var fhirresp = FHIRClient.CallFHIRServer("Subscription?status=active&_count=1000", null, "GET", log).GetAwaiter().GetResult();
-                        if (fhirresp.IsSuccess())
+                        var fhirresp = FHIRUtils.CallFHIRServer("Subscription?status=active&_count=1000", null, HttpMethod.Get, log).GetAwaiter().GetResult();
+                        if (fhirresp.Success)
                         {
-                            JToken t = fhirresp.toJToken();
+                            JToken t = JObject.Parse(fhirresp.Content);
                             if (!t["entry"].IsNullOrEmpty())
                             {
                                 JArray subs = (JArray)t["entry"];

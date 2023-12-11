@@ -657,7 +657,7 @@ echo "Creating Subscription Processor Application"
 	
 	# Deploy Function Application code
 	echo "Deploying FHIR Subscription Processor application repo to ["$subAppName"]...  note - this can take a while"
-	stepresult=$(retry az functionapp deployment source config --branch master --manual-integration --name $subAppName --repo-url https://github.com/sordahl-ga/FHIRSubscriptionProcessor --resource-group $resourceGroupName)
+	stepresult=$(retry az functionapp deployment source config --branch main --manual-integration --name $subAppName --repo-url https://github.com/microsoft/FHIR-SubscriptionProcessor --resource-group $resourceGroupName)
 	sleep 30	
 	#---
 
@@ -671,9 +671,9 @@ echo "Creating Subscription Processor Application"
 	echo ""
 	echo "Important:"
 	if [[ "$option" == "proxy" ]]; then
-		echo "Make sure you follow the post install steps for FHIR Proxy Eventing located here:https://github.com/sordahl-ga/FHIRSubscriptionProcessor/scripts/Readme.md"
+		echo "Make sure you follow the post install steps for FHIR Proxy Eventing located here:https://github.com/microsoft/FHIR-SubscriptionProcessor/scripts/Readme.md"
 	else
-		echo "Make sure you follow the post install steps for Healthcare APIs native eventing located here:https://github.com/sordahl-ga/FHIRSubscriptionProcessor/scripts/Readme.md"
+		echo "Make sure you follow the post install steps for Healthcare APIs native eventing located here:https://github.com/microsoft/FHIR-SubscriptionProcessor/scripts/Readme.md"
 	fi
 	echo "***************************************************************************************"
 	echo " "
