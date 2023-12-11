@@ -20,6 +20,19 @@ FHIR Subscription Processor is an Azure Function App solution that provides supp
 To quickly deploy the FHIR Subscription Processor, you can use the Azure deployment button:</br> 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsordahl-ga%2FFHIRSubscriptionProcessor%2Fmaster%2Fscripts%2Ffhirsubprocessor.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fsordahl-ga%2FFHIRSubscriptionProcessor%2Fmaster%2Fscripts%2FcreateUiDefinition.json)
 
+<B>Post Deployment Steps</B>
+1. [Access Azure Portal](https://portal.azure.com)
+2. Find and Select Your Azure Health Data Services Workspace for your FHIR Server
+3. Select the Events section on the left hand navigation window
+4. Click on the ```+ Event Subscription``` tab
+![Events1](../docs/images/neventsetup1.png)
+5. Provide a name for your subscription (e.g. fhirsubprocessnotify) and select all available FHIR Events
+![Events2](../docs/images/neventsetup2.png)
+6. Select endpoint type of Storage Queue then click select an endpoint, select the storage account installed with the FHIR Subscription Processor function, select exiting queue then select the ```fhirsubprocessorqueue```
+7. If you have more than one FHIR Service you can filter to the specified FHIR Service by: Select the filters tab, Check the enable subject filtering, enter the name of your FHIR Service in the Subject begins with filter textbox.  
+8. Click the Create Button
+9. You may now add Subscription resources and you should start receiving notifications at your defined web-hook endpoint when resources are created/updated that meet criteria in the FHIR Server  
+
 ## Simple Use Example
 Let's say you want to monitor your severe diabetic population via a population management application.  This population management application exposes a rest-hook endpoint that will trigger a refresh workflow for diabetic patients when called, this workflow may include updating population, reasessing population risk scores, etc... You want to trigger this endpoint when any Patient is directly assigned a diabetic Condition with complications in the FHIR Server. You would execute the following steps to acheive this:</br>
 1. Deploy the FHIR Subscription Processor using instructions above.
