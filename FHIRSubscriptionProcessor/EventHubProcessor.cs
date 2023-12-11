@@ -136,9 +136,7 @@ namespace FHIRSubscriptionProcessor
                         //Status should be requested for new/updated Subscriptions server marks them active
                         else if (status.Equals("active"))
                         {
-                            t["status"] = "error";
-                            t["error"] = $"ProcessSubscription: Status can only be marked active by server...Subscription/{id}";
-
+                            return;
                         }
                         else
                         {

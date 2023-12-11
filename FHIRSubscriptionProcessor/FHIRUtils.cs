@@ -101,7 +101,7 @@ namespace FHIRSubscriptionProcessor
                 _fhirRequest = new HttpRequestMessage(method, fhirurl);
                 _fhirRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _bearerToken);
                 _fhirRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                _fhirRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
+                if (body != null) _fhirRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
                 return await _fhirClient.SendAsync(_fhirRequest);
 
             });

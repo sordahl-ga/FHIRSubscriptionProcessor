@@ -35,13 +35,13 @@ namespace FHIRSubscriptionProcessor
 
                 }
                 JToken m = fhirevent["data"];
-                if (!m["ResourceType"].IsNullOrEmpty() && m["ResourceType"].ToString().Equals("Subscription"))
+                if (!m["resourceType"].IsNullOrEmpty() && m["resourceType"].ToString().Equals("Subscription"))
                 {
-                    await EventHubProcessor.ProcessSubscription(m["ResourceFhirId"].ToString(),action, log);
+                    await EventHubProcessor.ProcessSubscription(m["resourceFhirId"].ToString(),action, log);
                 }
                 else
                 {
-                    await EventHubProcessor.ProcessResourceEvent(m["ResourceType"].ToString(), m["ResourceFhirId"].ToString(),action, outputTopic, log);
+                    await EventHubProcessor.ProcessResourceEvent(m["resourceType"].ToString(), m["resourceFhirId"].ToString(),action, outputTopic, log);
                 }
             }
             catch (Exception e)
