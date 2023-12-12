@@ -12,7 +12,7 @@ FHIR Subscription Processor is an Azure Function App solution that provides supp
 1. The following resources providers must be registered in your subscription and you must have the ability to create/update them:
    + ResourceGroup, KeyVault, Storage Account, App Service Plan, Function App, ServiceBus, EventHub, Azure Cache for Redis
 2. You must have the policy assigned to read/write KeyVault Secrets in the speicified keyvault.
-3. You must have all resource updates flowing through the [FHIR Proxy](https://github.com/microsoft/fhir-proxy) with the PublishEvents post-processor enabled or using Native Eventing in [Azure Healthcare APIs](https://docs.microsoft.com/en-us/azure/healthcare-apis/)
+3. You must have all resource updates flowing through the [FHIR Proxy](https://github.com/microsoft/fhir-proxy) with the PublishEvents post-processor enabled or using Native Eventing in [Azure Health Data Services](https://docs.microsoft.com/en-us/azure/healthcare-apis/)
 
 ## Deployment
 
@@ -25,9 +25,9 @@ To quickly deploy the FHIR Subscription Processor, you can use the Azure deploym
 2. Find and Select Your Azure Health Data Services Workspace for your FHIR Server
 3. Select the Events section on the left hand navigation window
 4. Click on the ```+ Event Subscription``` tab
-![Events1](../docs/images/neventsetup1.png)
+![Events1](./docs/images/neventsetup1.png)
 5. Provide a name for your subscription (e.g. fhirsubprocessnotify) and select all available FHIR Events
-![Events2](../docs/images/neventsetup2.png)
+![Events2](./docs/images/neventsetup2.png)
 6. Select endpoint type of Storage Queue then click select an endpoint, select the storage account installed with the FHIR Subscription Processor function, select exiting queue then select the ```fhirsubprocessorqueue```
 7. If you have more than one FHIR Service you can filter to the specified FHIR Service by: Select the filters tab, Check the enable subject filtering, enter the name of your FHIR Service in the Subject begins with filter textbox.  
 8. Click the Create Button
