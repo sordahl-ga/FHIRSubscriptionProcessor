@@ -281,12 +281,13 @@
       "apiVersion": "2021-03-01",
       "name": "[format('{0}-app', variables('prefixNameCleanShort'))]",
       "location": "[parameters('location')]",
-      "kind": "functionapp",
+      "kind": "functionapp,linux",
       "sku": {
         "name": "[parameters('appServiceSize')]"
       },
       "properties": {
-        "targetWorkerCount": 2
+        "targetWorkerCount": 2,
+        "reserved": true
       },
       "tags": "[variables('appTags')]",
       "metadata": {
@@ -298,7 +299,7 @@
       "apiVersion": "2021-03-01",
       "name": "[format('{0}-func', variables('prefixNameCleanShort'))]",
       "location": "[parameters('location')]",
-      "kind": "functionapp",
+      "kind": "functionapp,linux",
       "identity": {
         "type": "SystemAssigned"
       },
@@ -309,6 +310,8 @@
         "clientAffinityEnabled": false,
         "siteConfig": {
           "alwaysOn": true,
+          "linuxFxVersion": "dotnet-isolated|8.0",
+          "use32BitWorkerProcess": false,
           "appSettings": [
             {
               "name": "FUNCTIONS_EXTENSION_VERSION",
