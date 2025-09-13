@@ -10,9 +10,8 @@ FHIR Subscription Processor is an Azure Function App solution that provides supp
 
 ## Prerequsites
 1. The following resources providers must be registered in your subscription and you must have the ability to create/update them:
-   + ResourceGroup, KeyVault, Storage Account, App Service Plan, Function App, ServiceBus, EventHub, Azure Cache for Redis
-2. You must have the policy assigned to read/write KeyVault Secrets in the speicified keyvault.
-3. You must have all resource updates using Native Eventing in [Azure Health Data Services](https://docs.microsoft.com/en-us/azure/healthcare-apis/)
+   + ResourceGroup, Storage Account, App Service Plan, Function App, ServiceBus, EventHub, Azure Cache for Redis
+2. You must have all resource updates using Native Eventing in [Azure Health Data Services](https://learn.microsoft.com/en-us/azure/healthcare-apis/events/)
 
 ## Deployment
 
