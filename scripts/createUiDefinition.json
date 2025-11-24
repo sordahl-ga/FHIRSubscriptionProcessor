@@ -48,6 +48,27 @@
                             ]
                         },
                         "visible": true
+                    },
+                    {
+                        "name": "r5BackportSelector",
+                        "label": "Enable R5 Backport Subscription Support",
+                        "type": "Microsoft.Common.DropDown",
+                        "defaultValue":"False",
+                        "toolTip": "",
+                        "constraints": {
+                            "allowedValues": [
+                                {
+                                    "label": "True",
+                                    "value": true
+                                },
+                                {
+                                    "label": "False",
+                                    "value": false
+                                }
+                            ],
+                            "required": true
+                        },
+                        "visible": true
                     }
                 ],
                 "visible": true
@@ -292,7 +313,7 @@
                             }
                         ],
                         "visible": "[equals('servicePrincipal', steps('appSettings').fhirAuthenticationSection.authenticationType)]"
-                    }
+                    }                    
                 ]
             },
             {
@@ -373,6 +394,7 @@
         ],
         "outputs": {
             "prefix": "[basics('basicsConfigurationSection').resourcePrefix]",
+            "enableR5Backport": "[basics('basicsConfigurationSection').r5BackportSelector]",
             "location": "[location()]",
             "fhirType": "[steps('appSettings').fhirSection.fhirType]",
             "fhirServiceName": "[steps('appSettings').fhirSection.fhirServiceSelector.name]",

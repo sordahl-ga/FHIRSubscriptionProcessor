@@ -1,6 +1,9 @@
 @description('Prefix for all resources')
 param prefix string = 'fsp'
 
+@description('Enable R5 Backport Subscription Support')
+param enableR5Backport bool = false
+
 @description('Location for all resources.')
 param location string = resourceGroup().location
 
@@ -235,6 +238,7 @@ resource fhirSubprocessorAppSettings 'Microsoft.Web/sites/config@2021-03-01' = {
 	'FSP-NOTIFYSB-CONNECTION': sbendpoint
 	'FSP-NOTIFYSB-SUBSCRIPTION': sbsub.name
 	'FSP-NOTIFYSB-TOPIC': sbtopic.name
+    'FS-ISR5BACKPORT': enableR5Backport ? 'true' : 'false'
   }
 }
 

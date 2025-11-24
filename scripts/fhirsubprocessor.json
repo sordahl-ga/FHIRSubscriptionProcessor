@@ -16,6 +16,13 @@
         "description": "Prefix for all resources"
       }
     },
+    "enableR5Backport": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable R5 Backport Subscription Support"
+      }
+    },
     "location": {
       "type": "string",
       "defaultValue": "[resourceGroup().location]",
@@ -352,7 +359,8 @@
         "FSP-REDISCONNECTION": "[format('{0}redis.redis.cache.windows.net,abortConnect=false,ssl=true,password={1}', variables('prefixNameCleanShort'), listKeys(resourceId('Microsoft.Cache/redis', format('{0}redis', variables('prefixNameCleanShort'))), '2020-06-01').primaryKey)]",
         "FSP-NOTIFYSB-CONNECTION": "[format('Endpoint=sb://{0}.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey={1}', format('{0}sb', variables('prefixNameCleanShort')), listKeys(variables('sblistkeysep'), '2021-06-01-preview').primaryKey)]",
         "FSP-NOTIFYSB-SUBSCRIPTION": "channelnotify",
-        "FSP-NOTIFYSB-TOPIC": "notifyfhirsub"
+        "FSP-NOTIFYSB-TOPIC": "notifyfhirsub",
+        "FS-ISR5BACKPORT": "[if(parameters('enableR5Backport'), 'true', 'false')]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', format('{0}-ai', variables('prefixNameCleanShort')))]",

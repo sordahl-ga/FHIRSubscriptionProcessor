@@ -646,7 +646,7 @@ echo "Creating Subscription Processor Application"
 	# Apply App Auth and Connection settings 
 	echo "Applying FHIR Subscription Processor App settings ["$subAppName"]..."
 	echo " Fhir Service URL will be referenced directly in App Settings for readability"
-		stepresult=$(az functionapp config appsettings set --name $subAppName --resource-group $resourceGroupName --settings FS-URL=$fhirServiceUrl FS-TENANT-NAME=$(kvuri FS-TENANT-NAME) FS-CLIENT-ID=$(kvuri FS-CLIENT-ID) FS-SECRET=$(kvuri FS-SECRET) FS-RESOURCE=$(kvuri FS-RESOURCE) FSP-NOTIFYSB-CONNECTION=$(kvuri FSP-NOTIFYSB-CONNECTION) FSP-NOTIFYSB-SUBSCRIPTION=$bussub FSP-NOTIFYSB-TOPIC=$bustopic FSP-REDISCONNECTION=$(kvuri FSP-REDISCONNECTION))
+		stepresult=$(az functionapp config appsettings set --name $subAppName --resource-group $resourceGroupName --settings FS-ISR5BACKPORT=false FS-URL=$fhirServiceUrl FS-TENANT-NAME=$(kvuri FS-TENANT-NAME) FS-CLIENT-ID=$(kvuri FS-CLIENT-ID) FS-SECRET=$(kvuri FS-SECRET) FS-RESOURCE=$(kvuri FS-RESOURCE) FSP-NOTIFYSB-CONNECTION=$(kvuri FSP-NOTIFYSB-CONNECTION) FSP-NOTIFYSB-SUBSCRIPTION=$bussub FSP-NOTIFYSB-TOPIC=$bustopic FSP-REDISCONNECTION=$(kvuri FSP-REDISCONNECTION))
 	if [[ "$option" == "proxy" ]]; then
 		echo "Adding FHIR Proxy eventing configuration..."
 		stepresult=$(az functionapp config appsettings set --name $subAppName --resource-group $resourceGroupName --settings FP-MOD-EVENTHUB-CONNECTION=$(kvuri FP-MOD-EVENTHUB-CONNECTION) FP-MOD-EVENTHUB-NAME=$(kvuri FP-MOD-EVENTHUB-NAME) FSP-CONSUMERGROUPNAME=$fhirProxyEHConsumer)
