@@ -378,7 +378,7 @@
       "name": "[format('{0}/{1}', format('{0}-func', variables('prefixNameCleanShort')), 'web')]",
       "properties": {
         "repoUrl": "[variables('repoUrl')]",
-        "branch": "master",
+        "branch": "personal/v-shanarang/R5backport",
         "isManualIntegration": true
       },
       "dependsOn": [
