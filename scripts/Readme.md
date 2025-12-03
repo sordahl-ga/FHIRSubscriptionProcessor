@@ -32,6 +32,11 @@ Please note you should deploy these components into a tenant and subscription wh
 
 ## Step 1.  Portal Deployment
 To quickly deploy the FHIR Subscription Processor, you can use the Azure deployment button:</br> 
+1. To use the R5 backporting feature for FHIR Subscription resources in R4, please set the parameter below to true.</br>
+By default, this parameter is set to false.
+
+![R5 Subscription Processor select](../docs/images/r5subscriptionselect.png)
+
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsordahl-ga%2FFHIRSubscriptionProcessor%2Fmaster%2Fscripts%2Ffhirsubprocessor.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fsordahl-ga%2FFHIRSubscriptionProcessor%2Fmaster%2Fscripts%2FcreateUiDefinition.json)
 
 
@@ -61,6 +66,7 @@ FSP-NOTIFYSB-TOPIC                 | ServiceBus Topic           | App Service Co
 FSP-NOTIFYSB-SUBSCRIPTION          | ServiceBus Topic Sub       | App Service Config
 FSP-REDISCONNECTION				   | Redis Connection			| Keyvault reference
 FSP-CONSUMERGROUPNAME			   | Proxy EventHub Consumer Grp| App Service Config
+FS-ISR5BACKPORT                    | True/False                 | App Service Config
 
 FHIR Subscription Processor Application Configuration values - unique values 
 

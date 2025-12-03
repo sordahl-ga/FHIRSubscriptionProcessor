@@ -17,6 +17,11 @@ FHIR Subscription Processor is an Azure Function App solution that provides supp
 
 ### Portal Deployment
 To quickly deploy the FHIR Subscription Processor, you can use the Azure deployment button:</br> 
+1. To use the R5 backporting feature for FHIR Subscription resources in R4, please set the parameter below to true.</br>
+By default, this parameter is set to false.
+
+![R5 Subscription Processor select](./docs/images/r5subscriptionselect.png)
+
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsordahl-ga%2FFHIRSubscriptionProcessor%2Fmaster%2Fscripts%2Ffhirsubprocessor.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fsordahl-ga%2FFHIRSubscriptionProcessor%2Fmaster%2Fscripts%2FcreateUiDefinition.json)
 
 <B>Post Deployment Steps</B>
@@ -33,6 +38,8 @@ To quickly deploy the FHIR Subscription Processor, you can use the Azure deploym
 9. You may now add Subscription resources and you should start receiving notifications at your defined web-hook endpoint when resources are created/updated that meet criteria in the FHIR Server  
 
 ## Simple Use Example
+For an example of how to use the R5 backport Subscription resource in an R4 sample, please refer to the link provided [here](./docs/r5subscription/readme.md).
+
 Let's say you want to monitor your severe diabetic population via a population management application.  This population management application exposes a rest-hook endpoint that will trigger a refresh workflow for diabetic patients when called, this workflow may include updating population, reasessing population risk scores, etc... You want to trigger this endpoint when any Patient is directly assigned a diabetic Condition with complications in the FHIR Server. You would execute the following steps to acheive this:</br>
 1. Deploy the FHIR Subscription Processor using instructions above.
 2. Using Postman or other HTTP Rest Client, Create a Subscription resource to monitor on the FHIR Server. This Subscription will trigger for Conditions created/updated with a Diabetic w/complication code(s):
